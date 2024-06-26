@@ -25,7 +25,8 @@ import ckan.model as model
 import ckan.plugins as plugins
 from ckan import authz
 from ckan.common import (
-    _, config, g, request, current_user, login_user, logout_user, session
+    _, config, g, request, current_user, login_user, logout_user, session,
+    repr_untrusted
 )
 from ckan.types import Context, Schema, Response
 from ckan.lib import signals
@@ -355,13 +356,15 @@ class EditView(MethodView):
         # We are recognizing sysadmin user
         # by email_changed variable.. this returns True
         # and we are entering the validation.
-        if (data_dict[u'password1']
-                and data_dict[u'password2']) or email_changed:
-
+        password_changed = (
+            data_dict.get('password1') and data_dict.get('password2')
+        )
+        if password_changed or email_changed:
             # getting the identity for current logged user
             identity = {
                 u'login': current_user.name,
-                u'password': data_dict[u'old_password']
+                u'password': data_dict[u'old_password'],
+                u'check_captcha': False
             }
             auth_user = authenticator.ckan_authenticator(identity)
 
@@ -671,11 +674,19 @@ class RequestResetView(MethodView):
 
     def post(self) -> Response:
         self._prepare()
+
+        try:
+            captcha.check_recaptcha(request)
+        except captcha.CaptchaError:
+            error_msg = _(u'Bad Captcha. Please try again.')
+            h.flash_error(error_msg)
+            return h.redirect_to(u'user.request_reset')
+
         id = request.form.get(u'user', '')
         if id in (None, u''):
             h.flash_error(_(u'Email is required'))
             return h.redirect_to(u'user.request_reset')
-        log.info(u'Password reset requested for user "{}"'.format(id))
+        log.info('Password reset requested for user %s', repr_untrusted(id))
 
         context: Context = {
             'user': current_user.name,
@@ -716,8 +727,8 @@ class RequestResetView(MethodView):
                 pass
 
         if not user_objs:
-            log.info(u'User requested reset link for unknown user: {}'
-                     .format(id))
+            log.info('User requested reset link for unknown user: %s',
+                     repr_untrusted(id))
 
         for user_obj in user_objs:
             log.info(u'Emailing reset link to user: {}'

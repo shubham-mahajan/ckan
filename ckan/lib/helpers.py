@@ -1746,8 +1746,9 @@ def dump_json(obj: Any, **kw: Any) -> str:
 
 @core_helper
 def snippet(template_name: str, **kw: Any) -> str:
-    ''' This function is used to load html snippets into pages. keywords
-    can be used to pass parameters into the snippet rendering '''
+    '''
+    Use {% snippet %} tag instead for better performance.
+    '''
     import ckan.lib.base as base
     return base.render_snippet(template_name, **kw)
 
@@ -2270,7 +2271,6 @@ def resource_view_is_filterable(resource_view: dict[str, Any]) -> bool:
 @core_helper
 def resource_view_get_fields(resource: dict[str, Any]) -> list["str"]:
     '''Returns sorted list of text and time fields of a datastore resource.'''
-
     if not resource.get('datastore_active'):
         return []
 
@@ -2512,6 +2512,18 @@ def unified_resource_format(format: str) -> str:
     else:
         format_new = format
     return format_new
+
+
+@core_helper
+def resource_url_type(resource_id: str) -> str:
+    '''api_info ajax snippet: "which extension manages this resource_id?"'''
+    # ajax snippets have no permissions checking and require things like
+    # this for full functionality, should we stop using them instead?
+    query = model.Session.query(model.Resource.url_type).filter(
+        model.Resource.id == resource_id,
+    )
+    result = query.one_or_none()
+    return result[0] if result else ''
 
 
 @core_helper
