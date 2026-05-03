@@ -152,6 +152,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1  # Fetch all history, including tags
+          persist-credentials: false
 
       # These two steps will be executed only when there IS a cache hit (exact match or not). When a matrix
       # job is retried, it will reuse the same artifact, to execute the exact same split.
@@ -328,6 +329,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Cache pip
         uses: actions/cache@v5
