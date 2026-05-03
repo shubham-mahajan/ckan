@@ -20,7 +20,7 @@ jobs:
 
     - name: Build Changelog URL and create release
       run: |
-        TAG_NAME=${{ github.ref_name }}
+        TAG_NAME=${GITHUB_REF_NAME}
         CKAN_VERSION=$(echo $TAG_NAME | sed -s 's/ckan-//')
         MAJOR=$(echo $CKAN_VERSION | cut -d'.' -f1)
         MINOR=$(echo $CKAN_VERSION | cut -d'.' -f2)

@@ -147,7 +147,9 @@ jobs:
 
     steps:
       - run: |
-          echo "${{ matrix.split }} of $SPLIT_COUNT"
+          echo "${MATRIX_SPLIT} of $SPLIT_COUNT"
+        env:
+          MATRIX_SPLIT: ${{ matrix.split }}
 
       - uses: actions/checkout@v6
         with:
@@ -200,12 +202,14 @@ jobs:
           set -ex
 
           mkdir -p ./junit/result
-          echo "${{ matrix.split }} of $SPLIT_COUNT"
+          echo "${MATRIX_SPLIT} of $SPLIT_COUNT"
 
           echo "::group::pytest"
           #we ignore test 'test_building_the_docs' as its looked after by the docs.yml workflow which provides the sphinx documentation build artifact and it also takes 50 seconds to run
-          pytest $PYTEST_COMMON_OPTIONS --splits $SPLIT_COUNT --group ${{ matrix.split }} --splitting-algorithm least_duration --store-durations --clean-durations  -k 'not test_building_the_docs'
+          pytest $PYTEST_COMMON_OPTIONS --splits $SPLIT_COUNT --group ${MATRIX_SPLIT} --splitting-algorithm least_duration --store-durations --clean-durations  -k 'not test_building_the_docs'
           echo "::endgroup::"
+        env:
+          MATRIX_SPLIT: ${{ matrix.split }}
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
@@ -237,7 +241,9 @@ jobs:
 
       - name: Prep test coverage split file
         run: |
-          mv .coverage coverage-${{ matrix.split }}
+          mv .coverage coverage-${MATRIX_SPLIT}
+        env:
+          MATRIX_SPLIT: ${{ matrix.split }}
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v7
