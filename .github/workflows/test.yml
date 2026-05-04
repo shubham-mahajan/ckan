@@ -9,32 +9,41 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }} # workflow limits it to this workflow, ref includes a pushed branch or on pull request merge branch
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
 
   ruff:
     name: Lint (Ruff)
     uses: ./.github/workflows/ruff.yml # Call the reusable workflow
+    permissions:
+      contents: read
     secrets: inherit
 
   pyright:
     name: Lint (PyRight)
     uses: ./.github/workflows/pyright.yml # Call the reusable workflow
+    permissions:
+      contents: read
     secrets: inherit
 
   cypress:
     name: Test (Cypress)
     uses: ./.github/workflows/cypress.yml # Call the reusable workflow
+    permissions:
+      contents: read
     secrets: inherit
 
   docs:
     name: Documentation
     uses: ./.github/workflows/docs.yml # Call the reusable workflow
+    permissions:
+      contents: read
     secrets: inherit
 
   pytest:
     name: Test (Pytest)
     uses: ./.github/workflows/pytest.yml # Call the reusable workflow
+    permissions:
+      contents: read
     secrets: inherit

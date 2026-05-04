@@ -6,11 +6,16 @@ on:
     tags:
       - 'ckan-**'
 
+permissions: {}
+
+
 jobs:
   build:
     if: github.repository == 'ckan/ckan'
     name: Build distribution
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
@@ -55,6 +60,7 @@ jobs:
   publishSkipped:
     if: github.repository != 'ckan/ckan'
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - run: |
           echo "## Skipping PyPI publish on downstream repository" >> $GITHUB_STEP_SUMMARY

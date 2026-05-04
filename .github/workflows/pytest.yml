@@ -17,12 +17,12 @@ on:
 env:
   PIP_CACHE_DIR: /root/.cache/pip
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   define-matrix:
     runs-on: ubuntu-latest
+    permissions: {}
 
     outputs:
       SPLIT_LIST: ${{ steps.splits.outputs.SPLIT_LIST }}
@@ -106,6 +106,8 @@ jobs:
   pytest:
     needs: define-matrix
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -289,6 +291,7 @@ jobs:
     needs: pytest
     if: github.run_attempt == 1 && (success() || failure())
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - name: Download all partial test durations
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -328,6 +331,8 @@ jobs:
     needs: pytest
     if: github.run_attempt == 1 && (success() || failure()) && needs.define-matrix.outputs.IS_PYTEST_COMBINE_TEST_RESULTS_DISABLED == 'false'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     container:
       # Needs to run on the same image the tests were run
       image: python:3.10-bookworm
