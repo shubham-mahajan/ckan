@@ -13,7 +13,7 @@ jobs:
     name: Create GitHub release
     runs-on: ubuntu-latest
     permissions:
-      content: write  # So it can create the release via the API
+      contents: write  # So it can create the release via the API
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
