@@ -4,6 +4,9 @@ name: Pytest
 on:
   #pull_request: #disabled as its called via test.yml uses delegation
   workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
   workflow_dispatch:
     inputs:
       splits:
