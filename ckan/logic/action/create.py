@@ -1454,7 +1454,7 @@ def api_token_create(context: Context,
     :rtype: dictionary
 
     """
-    user, name = _get_or_bust(data_dict, [u'user', u'name'])
+    user, _name = _get_or_bust(data_dict, [u'user', u'name'])
 
     if model.User.get(user) is None:
         raise NotFound("User not found")
