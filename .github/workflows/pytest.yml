@@ -217,7 +217,7 @@ jobs:
           MATRIX_SPLIT: ${{ matrix.split }}
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         if: ${{ !cancelled() }}
         continue-on-error: true #don't fail if we can't upload (ie a fork that does not have integration plugged in)
         with:
@@ -268,13 +268,13 @@ jobs:
           retention-days: 1
 
       - name: Test Summary (if Failure)
-        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
         with:
           paths: "./junit/result/*.xml"
         if: failure()
 
       - name: Test Summary Local copy (If Failure)
-        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
         with:
           paths: "./junit/result/*.xml"
           output: "./junit/result/test-summary.md"
