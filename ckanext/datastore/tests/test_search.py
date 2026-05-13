@@ -565,7 +565,7 @@ class TestDatastoreSearchLegacyTests(object):
     def test_search_filter_array_field(self, app):
         data = {
             "resource_id": self.data["resource_id"],
-            "filters": {u"characters": [u"Princess Anna", u"Sergius"]},
+            "filters": {"characters": {"eq": ["Princess Anna", "Sergius"]}},
         }
 
         headers = {"Authorization": self.normal_user_token}
@@ -630,6 +630,8 @@ class TestDatastoreSearchLegacyTests(object):
         result = res_dict["result"]
         assert result["total"] == 1
         assert result["records"] == [self.expected_records[0]]
+
+
 
     @pytest.mark.ckan_config("ckan.plugins", "datastore")
     @pytest.mark.usefixtures("clean_datastore", "with_plugins")
@@ -1691,7 +1693,7 @@ class TestDatastoreSQLFunctional(object):
 
 
 @pytest.mark.ckan_config("ckan.plugins", "datastore")
-@pytest.mark.usefixtures("with_plugins")
+@pytest.mark.usefixtures("with_plugins", "with_request_context")
 class TestDatastoreSearchRecordsFormat(object):
     def test_sort_results_objects(self):
         ds = factories.Dataset()
@@ -1775,6 +1777,14 @@ class TestDatastoreSearchRecordsFormat(object):
                 u"txt": u"aaac",
             },
         ]
+        assert helpers.call_action(
+            "datastore_search", resource_id=r["resource_id"],
+            limit=2, include_next_page=True,
+        )["next_page"] == {"_id": {"gt": 2}}
+        assert helpers.call_action(
+            "datastore_search", resource_id=r["resource_id"],
+            sort="_id desc", limit=3, include_next_page=True,
+        )["next_page"] == {"_id": {"lt": 1}}
 
     @pytest.mark.ckan_config("ckan.datastore.ms_in_timestamp", False)
     def test_sort_results_objects_without_ms(self):
@@ -1906,6 +1916,15 @@ class TestDatastoreSearchRecordsFormat(object):
             [1, 10, u"2020-01-01T00:00:00.000", u"aaab"],
             [3, 9, u"2020-01-01T00:00:00.000", u"aaac"],
         ]
+        assert helpers.call_action(
+            "datastore_search", resource_id=r["resource_id"],
+            limit=2, include_next_page=True, records_format="lists",
+        )["next_page"] == {"_id": {"gt": 2}}
+        assert helpers.call_action(
+            "datastore_search", resource_id=r["resource_id"],
+            sort="_id desc", limit=3, include_next_page=True,
+            records_format="lists",
+        )["next_page"] == {"_id": {"lt": 1}}
 
     def test_sort_results_csv(self):
         ds = factories.Dataset()
@@ -1956,6 +1975,15 @@ class TestDatastoreSearchRecordsFormat(object):
             u"1,10,2020-01-01T00:00:00.000,aaab\n"
             u"3,9,2020-01-01T00:00:00.000,aaac\n"
         )
+        assert helpers.call_action(
+            "datastore_search", resource_id=r["resource_id"],
+            limit=2, include_next_page=True, records_format="csv",
+        )["next_page"] == {"_id": {"gt": 2}}
+        assert helpers.call_action(
+            "datastore_search", resource_id=r["resource_id"],
+            sort="_id desc", limit=3, include_next_page=True,
+            records_format="csv",
+        )["next_page"] == {"_id": {"lt": 1}}
 
     def test_fields_results_csv(self):
         ds = factories.Dataset()
@@ -2300,3 +2328,108 @@ def test_search_table_metadata():
             "select name from _table_metadata where name='_table_stats'"
         ))
     assert list(tables) == []
+
+
+class TestDatastoreSearchFilters(object):
+    @pytest.mark.ckan_config("ckan.plugins", "datastore")
+    @pytest.mark.usefixtures("clean_datastore", "with_plugins", "with_request_context")
+    def test_range(self):
+        dataset = factories.Dataset()
+        data = {
+            "resource": {"package_id": dataset["id"]},
+            "fields": [
+                {"id": "num", "type": "int"},
+            ],
+            "records": [
+                {"num": 5}, {"num": 7}, {"num": 9}, {"num": 1}, {"num":10},
+            ]
+        }
+        result = helpers.call_action("datastore_create", **data)
+        resource_id = result["resource_id"]
+        result = helpers.call_action(
+            "datastore_search",
+            resource_id=resource_id,
+            filters={"num": {"gt": 5, "lt": 9}},
+        )
+        assert result["records"] == [{"_id": 2, "num": 7}]
+        result = helpers.call_action(
+            "datastore_search",
+            resource_id=resource_id,
+            filters={"num": {"gte": 5, "lte": 9}},
+        )
+        assert result["records"] == [
+            {"_id": 1, "num": 5},
+            {"_id": 2, "num": 7},
+            {"_id": 3, "num": 9},
+        ]
+        result = helpers.call_action(
+            "datastore_search",
+            resource_id=resource_id,
+            filters={"num": [{"lte": 1}, 7, {"gte": 10}]},
+        )
+        assert result["records"] == [
+            {"_id": 2, "num": 7},
+            {"_id": 4, "num": 1},
+            {"_id": 5, "num": 10},
+        ]
+
+    @pytest.mark.ckan_config("ckan.plugins", "datastore")
+    @pytest.mark.usefixtures("clean_datastore", "with_plugins", "with_request_context")
+    def test_nested_and_or(self):
+        dataset = factories.Dataset()
+        data = {
+            "resource": {"package_id": dataset["id"]},
+            "fields": [
+                {"id": "course", "type": "text"},
+                {"id": "special", "type": "bool"},
+            ],
+            "records": [
+                {"course": "salad", "special": False},
+                {"course": "appetizer", "special": False},
+                {"course": "main", "special": True},
+                {"course": "dessert", "special": False},
+            ]
+        }
+        result = helpers.call_action("datastore_create", **data)
+        resource_id = result["resource_id"]
+        result = helpers.call_action(
+            "datastore_search",
+            resource_id=resource_id,
+            filters={
+                "$or": [
+                    {"course": "appetizer", "special": False},
+                    {"special": True}
+                ]
+            },
+        )
+        assert result["records"] == [
+            {"_id": 2, "course": "appetizer", "special": False},
+            {"_id": 3, "course": "main", "special": True},
+        ]
+        result = helpers.call_action(
+            "datastore_search",
+            resource_id=resource_id,
+            filters=[
+                {"course": "appetizer", "special": False},
+                {"special": True}
+            ],
+        )
+        assert result["records"] == [
+            {"_id": 2, "course": "appetizer", "special": False},
+            {"_id": 3, "course": "main", "special": True},
+        ]
+        result = helpers.call_action(
+            "datastore_search",
+            resource_id=resource_id,
+            filters={
+                "special": False,
+                "$or": [
+                    {"course": "appetizer"},
+                    {"_id": {"gt": 2}}
+                ]
+            },
+        )
+        assert result["records"] == [
+            {"_id": 2, "course": "appetizer", "special": False},
+            {"_id": 4, "course": "dessert", "special": False},
+        ]
